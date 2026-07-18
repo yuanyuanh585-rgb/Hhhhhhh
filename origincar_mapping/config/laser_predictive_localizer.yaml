@@ -1,0 +1,185 @@
+laser_predictive_localizer:
+  ros__parameters:
+    # 是否使用仿真时间。
+    # false: 使用系统时间，实车默认。
+    # true: 使用 /clock，Gazebo 或 rosbag 回放时通常需要打开。
+    use_sim_time: false
+
+    # 静态地图话题，类型 nav_msgs/msg/OccupancyGrid。
+    # 定位节点会订阅这张地图，建立障碍物距离场，用激光点和地图做匹配评分。
+    map_topic: /map
+
+    # 2D 激光雷达话题，类型 sensor_msgs/msg/LaserScan。
+    # 每次收到 scan 后，节点会按 localization_update_frequency 做节流，再决定是否执行一次定位匹配。
+    scan_topic: /scan
+
+    # 初始位姿话题，类型 geometry_msgs/msg/PoseWithCovarianceStamped。
+    # RViz 的 2D Pose Estimate 会发布到这里；预测定位可用它直接种下初始 map 位姿。
+    # 如果没有初始位姿，节点会按 global_search_frequency 周期尝试全局搜索。
+    initial_pose_topic: /initialpose
+
+    # 定位结果调试输出话题。
+    # 发布机器人在 map 坐标系下的估计位姿，不是 Nav2 最终控制指令。
+    pose_topic: /laser_pose
+
+    # 机器人底盘坐标系。
+    # 激光点会先转换到该坐标系，定位结果也表示 map -> base_footprint。
+    base_frame_id: base_footprint
+
+    # 连续里程计坐标系。
+    # 节点根据匹配出的 map -> base_footprint 和 TF 中的 odom_combined -> base_footprint，
+    # 反推出并发布 map -> odom_combined，供 Nav2 使用。
+    odom_frame_id: odom_combined
+
+    # 全局地图坐标系，也是定位输出的父坐标系。
+    global_frame_id: map
+
+    # 激光雷达坐标系。
+    # 当 LaserScan header.frame_id 为空时，会用这个参数作为激光坐标系。
+    laser_frame_id: laser_link
+
+    # 激光降采样步长。
+    # 10 表示每 10 条激光束取 1 条参与匹配；数值越小点越多、精度可能更高，但计算更重。
+    scan_step: 10
+
+    # 参与匹配的最大激光距离，单位 m。
+    # 超过该距离的点会被丢弃；+inf 量测会按 min(max_range, scan.range_max) 截断使用。
+    max_range: 9.0
+
+    # 最低匹配分数。
+    # 分数是激光点落在地图障碍附近的平均得分，通常约 0.0 到 1.0。
+    # 低于该值时，本帧定位会被拒绝，并保留上一帧有效 map -> odom_combined。
+    min_score: 0.40
+
+    # OccupancyGrid 中大于等于该值的栅格视为障碍。
+    # 未知栅格 value < 0 也会按障碍处理，用于距离场构建。
+    occupied_threshold: 60
+
+    # OccupancyGrid 中小于等于该值的栅格视为可通行自由空间。
+    # 全局搜索和局部搜索的候选机器人中心只会放在自由栅格上。
+    free_threshold: 10
+
+    # 匹配评分的距离衰减尺度，单位 m。
+    # 值越小，激光点必须更贴近地图障碍才得高分；值越大，对地图误差和雷达噪声更宽容。
+    score_sigma: 0.09
+
+    # 单帧定位要求的最少有效激光点数量。
+    # 降采样、距离过滤后少于这个数量，本帧会跳过，避免用信息不足的 scan 更新位姿。
+    min_scan_points: 25
+
+    # 是否发布匹配分数调试话题 laser_predictive_localizer/score。
+    # 调参时建议打开，实车稳定后可关闭以减少少量话题输出。
+    debug_publish: true
+
+    # 主定位匹配计算频率，单位 Hz。
+    # 当前值 8.0 表示最多每秒执行 8 次激光匹配；实际频率还受 /scan 频率和计算耗时限制。
+    # 这不是 TF 发布频率，也不是全局重定位频率。
+    localization_update_frequency: 9.0
+
+    # 已有有效定位后，map -> odom_combined 的重发频率，单位 Hz。
+    # 20Hz 表示即使不是每帧都重新匹配，也会周期性重发最近一次有效 TF，保持 TF 树连续可查。
+    tf_publish_frequency: 10.0
+
+    # 常规预测跟踪的 XY 搜索半窗口，单位 m。
+    # 节点先用上一帧 map 位姿和当前 odom 变化预测当前位置，再在预测点周围 +/- 该距离搜索。
+    local_xy_window: 0.35
+
+    # 常规预测跟踪的 yaw 搜索半窗口，单位 deg。
+    # 非明显转弯时，候选朝向会围绕预测 yaw 在 +/- 该角度内搜索。
+    local_yaw_window_deg: 20.0
+
+    # 常规预测跟踪的 XY 粗搜索步长，单位 m。
+    # 步长越小定位更细，但候选数量按二维网格快速增加。
+    local_xy_step: 0.05
+
+    # 常规预测跟踪的 yaw 粗搜索步长，单位 deg。
+    # 步长越小角度更准，但候选数量增加。
+    local_yaw_step_deg: 1.0
+
+    # 粗搜索命中后，二次精细搜索的 XY 半窗口，单位 m。
+    # 用于在粗搜索最佳位姿附近进一步收敛位置。
+    fine_xy_window: 0.10
+
+    # 粗搜索命中后，二次精细搜索的 yaw 半窗口，单位 deg。
+    # 用于在粗搜索最佳朝向附近进一步收敛角度。
+    fine_yaw_window_deg: 5.0
+
+    # 二次精细搜索的 XY 步长，单位 m。
+    fine_xy_step: 0.02
+
+    # 二次精细搜索的 yaw 步长，单位 deg。
+    fine_yaw_step_deg: 0.5
+
+    # 通过里程计增量判断“正在转弯”的 yaw 变化阈值，单位 deg。
+    # 两次成功定位之间 odom yaw 变化超过该值时，会认为本帧处于转弯状态。
+    turning_delta_yaw_threshold_deg: 5.0
+
+    # 通过里程计增量判断“正在转弯”的角速度阈值，单位 rad/s。
+    # 如果 yaw 变化除以时间间隔超过该值，也会认为本帧处于转弯状态。
+    turning_yaw_rate_threshold: 0.40
+
+    # 转弯状态下使用的 yaw 搜索半窗口，单位 deg。
+    # 转弯时预测 yaw 更容易偏，所以这里通常比 local_yaw_window_deg 大。
+    turning_yaw_window_deg: 35.0
+
+    # 局部预测匹配分数低于 min_score 后，恢复搜索的 XY 半窗口，单位 m。
+    # 比 local_xy_window 大，用来从短时打滑、遮挡或里程计误差中找回位姿。
+    recovery_xy_window: 1.5
+
+    # 恢复搜索的 yaw 半窗口，单位 deg。
+    # 比常规窗口大，用来处理较大的朝向偏差。
+    recovery_yaw_window_deg: 120.0
+
+    # 连续失败多少次后丢弃上一帧局部种子。
+    # 丢弃后节点会等待 /initialpose，或按 global_search_frequency 尝试全局搜索。
+    recovery_failure_limit: 3
+
+    # 没有可用上一帧位姿时，全局搜索的最高频率，单位 Hz。
+    # 当前 1.0 表示最多每秒做 1 次全图粗搜索；全局搜索计算量远大于局部预测跟踪。
+    global_search_frequency: 1.5
+
+    # 全局粗搜索的 XY 步长，单位 m。
+    # 用于在整张地图自由栅格上抽样候选位置；越小越准但越慢。
+    global_coarse_xy_step: 0.18
+
+    # 全局粗搜索的 yaw 步长，单位 deg。
+    # 全局搜索会在 -pi 到 pi 范围按该角度枚举朝向。
+    global_coarse_yaw_step_deg: 5.0
+
+    # 全局粗搜索命中后，局部精修的 XY 步长，单位 m。
+    global_fine_xy_step: 0.04
+
+    # 全局粗搜索命中后，局部精修的 yaw 步长，单位 deg。
+    global_fine_yaw_step_deg: 0.6
+
+    # 是否启用首次自动定位的原点附近约束。
+    # true: 节点启动后如果没有 /initialpose，第一次自动搜索只在 map 原点附近找；
+    #       第一次成功定位后，后续跟丢仍使用正常全图重定位。
+    # false: 没有 /initialpose 时直接使用整图全局搜索。
+    initial_origin_guard_enabled: true
+
+    # 首次自动定位约束中心，单位 m，坐标系为 map。
+    # 注意这里是 map 坐标系下的小车初始位置，不是地图 yaml 的 origin 像素偏移。
+    initial_origin_x: 0.0
+    initial_origin_y: 0.0
+
+    # 首次自动定位允许离原点的最大半径，单位 m。
+    # 5x5 正方形地图容易出现对称误匹配，限制在起点附近可避免第一次跳到其他角落。
+    initial_origin_radius: 0.6
+
+    # 首次自动定位的参考朝向和朝向半窗口，单位 deg。
+    # yaw_window=180 表示位置限制在原点附近，但朝向仍允许搜索整圈。
+    initial_origin_yaw_deg: 0.0
+    initial_origin_yaw_window_deg: 180.0
+
+    # 全局搜索或恢复搜索时的歧义判断分数差。
+    # 最佳候选和次佳“不同位姿”候选的分数差小于该值时，会认为定位结果不可靠并拒绝更新。
+    ambiguity_score_gap: 0.02
+
+    # 判断两个候选位姿是否“不同”的 XY 距离阈值，单位 m。
+    # 距离超过该值时，会把候选计入次佳位姿，用于歧义判断。
+    distinct_xy_distance: 0.40
+
+    # 判断两个候选位姿是否“不同”的 yaw 阈值，单位 deg。
+    # 朝向差超过该值时，也会把候选计入次佳位姿，用于歧义判断。
+    distinct_yaw_distance_deg: 35.0

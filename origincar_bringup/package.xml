@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <!-- 包名：和 CMakeLists.txt 中的 project(origincar_bringup) 必须一致。 -->
+  <name>origincar_bringup</name>
+  <!-- 项目版本号；如果发布成 ROS 包，版本升级会从这里体现。 -->
+  <version>0.1.0</version>
+  <!-- 包说明：本包提供统一启动入口，不包含具体算法实现。 -->
+  <description>Unified launch entrypoints for Origincar simulation, mapping, and navigation.</description>
+  <!-- 维护者信息；ROS 包格式要求必须提供 maintainer 和 license。 -->
+  <maintainer email="xjl@example.com">xjl</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- 构建工具依赖：使用 ament_cmake 安装 launch 文件。 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 运行时依赖：bringup 的 launch 会包含这三个功能包的 launch 文件。 -->
+  <exec_depend>origincar_base</exec_depend>
+  <exec_depend>origincar_mapping</exec_depend>
+  <exec_depend>origincar_navigation</exec_depend>
+  <exec_depend>origincar_strategy</exec_depend>
+  <exec_depend>origincar_sim</exec_depend>
+  <exec_depend>lslidar_driver</exec_depend>
+  <exec_depend>imu_calib</exec_depend>
+  <exec_depend>imu_complementary_filter</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <!-- 顶层 real_navigation.launch.py 会直接包含 Nav2 官方 navigation_launch.py。 -->
+  <exec_depend>nav2_bringup</exec_depend>
+
+  <export>
+    <!-- 声明构建类型，让 colcon/ament 知道该包按 ament_cmake 处理。 -->
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
