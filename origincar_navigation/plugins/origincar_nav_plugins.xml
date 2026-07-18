@@ -1,0 +1,42 @@
+<library path="origincar_navigation">
+  <class
+    name="origincar_navigation/OrigincarGlobalPlanner"
+    type="origincar_navigation::OrigincarGlobalPlanner"
+    base_class_type="nav2_core::GlobalPlanner">
+    <description>
+      Goal Z encoded global planner with three configured Hermite-smoothed routes and Navfn fallback.
+    </description>
+  </class>
+  <class
+    name="origincar_navigation/OrigincarAckermannPurePursuitController"
+    type="origincar_navigation::OrigincarAckermannPurePursuitController"
+    base_class_type="nav2_core::Controller">
+    <description>
+      Ackermann pure pursuit controller with forward and reverse tracking support.
+    </description>
+  </class>
+  <class
+    name="origincar_navigation/OrigincarAckermannController"
+    type="origincar_navigation::OrigincarAckermannController"
+    base_class_type="nav2_core::Controller">
+    <description>
+      Ackermann controller with independent my-planner-style speed and yaw-rate control.
+    </description>
+  </class>
+  <class
+    name="origincar_navigation/NoopProgressChecker"
+    type="origincar_navigation::NoopProgressChecker"
+    base_class_type="nav2_core::ProgressChecker">
+    <description>
+      Progress checker that always reports progress for fixed-route Origincar navigation.
+    </description>
+  </class>
+  <class
+    name="origincar_navigation/OrigincarGoalChecker"
+    type="origincar_navigation::OrigincarGoalChecker"
+    base_class_type="nav2_core::GoalChecker">
+    <description>
+      Goal checker that shares the same goal-reached semantics as the Origincar pure pursuit controller.
+    </description>
+  </class>
+</library>

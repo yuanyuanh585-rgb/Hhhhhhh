@@ -1,0 +1,387 @@
+<?xml version="1.0"?>
+<!--
+  Origincar 阿克曼小车 URDF/xacro 模型。
+  这个文件同时服务三件事：
+  1. robot_state_publisher 读取它，发布 base_footprint 之后的 TF 链；
+  2. Gazebo 读取它，生成可视化、碰撞体、惯性、雷达/IMU 传感器；
+  3. Gazebo 加载底部的 libackermann_kinematic_plugin.so，实现车辆运动学控制。
+
+  xacro 是“带宏和变量的 URDF”。下面先定义几何尺寸和宏，再实例化车体、传感器、
+  前后轮、Gazebo 传感器插件和阿克曼底盘插件。
+-->
+<robot name="origincar_ackermann" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- 常量：圆周率，给圆柱旋转、激光扫描角度等地方使用。 -->
+  <xacro:property name="PI" value="3.141592653589793"/>
+  <!-- 左右轮距，单位米。这里把 x 方向理解为前后轴方向，y 方向为左右方向。 -->
+  <xacro:property name="track" value="0.1682"/>
+  <!-- 前后轴距，单位米。 -->
+  <xacro:property name="wheelbase" value="0.189"/>
+  <!-- 车轮圆柱厚度，单位米。 -->
+  <xacro:property name="wheel_len" value="0.025"/>
+  <!-- 车轮半径，单位米。 -->
+  <xacro:property name="wheel_radius" value="0.03"/>
+  <!-- 主车体长度，单位米。 -->
+  <xacro:property name="body_length" value="0.276"/>
+  <!-- 主车体宽度，这里按轴距减去轮厚近似，使轮子外观贴合车体。 -->
+  <xacro:property name="body_width" value="${wheelbase - wheel_len}"/>
+  <!-- 主车体高度，单位米。 -->
+  <xacro:property name="body_height" value="0.08"/>
+  <!-- 车体加上上层板后的总高度，单位米。 -->
+  <xacro:property name="total_height" value="0.150"/>
+  <!-- base_link 中心高度。车轮落在地面 z=0 时，车体中心位于 wheel_radius + body_height/2。 -->
+  <xacro:property name="body_z" value="${wheel_radius + body_height / 2.0}"/>
+  <!-- 主车体顶部高度。 -->
+  <xacro:property name="top_z" value="${wheel_radius + body_height}"/>
+  <!-- 顶部 2D 激光雷达外观圆柱半径和高度。 -->
+  <xacro:property name="laser_radius" value="0.035"/>
+  <xacro:property name="laser_height" value="0.025"/>
+
+  <!--
+    长方体惯性宏。
+    mass 是质量，x/y/z 是盒子三边尺寸。惯性矩使用均匀长方体公式：
+    Ixx = m(y^2 + z^2)/12，Iyy = m(x^2 + z^2)/12，Izz = m(x^2 + y^2)/12。
+    Gazebo 需要合理惯性才能稳定仿真，即使本项目位姿主要由运动学插件直接设置。
+  -->
+  <xacro:macro name="box_inertial" params="mass x y z">
+    <inertial>
+      <mass value="${mass}"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia
+        ixx="${mass * (y * y + z * z) / 12.0}"
+        ixy="0"
+        ixz="0"
+        iyy="${mass * (x * x + z * z) / 12.0}"
+        iyz="0"
+        izz="${mass * (x * x + y * y) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!--
+    圆柱/车轮惯性宏。
+    这里假设车轮圆柱轴线沿 y 轴，所以 Iyy 使用实心圆柱绕自身轴的公式 m*r^2/2。
+  -->
+  <xacro:macro name="wheel_inertial" params="mass radius length">
+    <inertial>
+      <mass value="${mass}"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia
+        ixx="${mass * (3.0 * radius * radius + length * length) / 12.0}"
+        ixy="0"
+        ixz="0"
+        iyy="${mass * radius * radius / 2.0}"
+        iyz="0"
+        izz="${mass * (3.0 * radius * radius + length * length) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!--
+    车轮 link 生成宏。
+    name 是 link 名称，color_r/g/b 是 RViz 中的车轮颜色。
+    每个车轮都有 visual、collision 和 inertial；Gazebo reference 用来补充摩擦和材质。
+  -->
+  <xacro:macro name="cylinder_wheel" params="name color_r color_g color_b">
+    <link name="${name}">
+      <visual>
+        <!-- URDF 圆柱默认沿 z 轴，这里绕 x 轴旋转 90 度，让车轮轴线沿 y 轴。 -->
+        <origin xyz="0 0 0" rpy="${PI / 2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_len}"/>
+        </geometry>
+        <material name="${name}_mat">
+          <color rgba="${color_r} ${color_g} ${color_b} 1"/>
+        </material>
+      </visual>
+      <collision>
+        <!-- 碰撞体与视觉模型保持一致。 -->
+        <origin xyz="0 0 0" rpy="${PI / 2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_len}"/>
+        </geometry>
+      </collision>
+      <xacro:wheel_inertial mass="0.08" radius="${wheel_radius}" length="${wheel_len}"/>
+    </link>
+    <gazebo reference="${name}">
+      <!-- 车轮摩擦系数，主要影响 Gazebo 物理接触；当前运动学插件直接设位姿，所以这里偏可视化/基础碰撞。 -->
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+      <material>Gazebo/Red</material>
+    </gazebo>
+  </xacro:macro>
+
+  <!--
+    base_footprint 是机器人在地面上的二维底盘参考点，z=0。
+    导航和定位通常使用 base_footprint，避免车体高度影响 2D 规划。
+  -->
+  <link name="base_footprint"/>
+
+  <!-- base_link 是车体三维中心，固定连接在 base_footprint 上方 body_z 处。 -->
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${body_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 主车体：红色长方体，包含 visual/collision/inertial。 -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <material name="origincar_body_red">
+        <color rgba="${102/255} ${10/255} ${10/255} 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertial mass="1.2" x="${body_length}" y="${body_width}" z="${body_height}"/>
+  </link>
+
+  <!-- 上层板/车载电路板外观：粉色长方体，固定在主车体上方偏后位置。 -->
+  <link name="board_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.200 ${body_width} ${total_height - body_height}"/>
+      </geometry>
+      <material name="origincar_board_pink">
+        <color rgba="${246/255} ${152/255} ${152/255} 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.200 ${body_width} ${total_height - body_height}"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertial mass="0.25" x="0.200" y="${body_width}" z="${total_height - body_height}"/>
+  </link>
+
+  <!-- 上层板固定到 base_link。x 方向略偏向车体后方，z 方向位于主车体上方。 -->
+  <joint name="board_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="board_link"/>
+    <origin xyz="${-(body_length - 0.200) / 2.0} 0 ${(body_height + total_height - body_height) / 2.0}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- IMU 外观 link：小黑盒，Gazebo 插件会在该 link 上挂 IMU 传感器。 -->
+  <link name="imu_link">
+    <visual>
+      <geometry>
+        <box size="0.025 0.025 0.010"/>
+      </geometry>
+      <material name="imu_black">
+        <color rgba="0.05 0.05 0.05 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.025 0.025 0.010"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertial mass="0.02" x="0.025" y="0.025" z="0.010"/>
+  </link>
+
+  <!-- IMU 固定在车体顶部附近。 -->
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 ${body_height / 2.0 + 0.010}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- 2D 激光雷达外观 link：顶部深色圆柱。Gazebo ray sensor 挂在该 link 上。 -->
+  <link name="laser_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${laser_radius}" length="${laser_height}"/>
+      </geometry>
+      <material name="laser_dark">
+        <color rgba="0.10 0.10 0.12 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${laser_radius}" length="${laser_height}"/>
+      </geometry>
+    </collision>
+    <xacro:wheel_inertial mass="0.12" radius="${laser_radius}" length="${laser_height}"/>
+  </link>
+
+  <!-- 激光雷达固定在车顶上方。 -->
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser_link"/>
+    <origin xyz="0 0 ${total_height - body_z + laser_height / 2.0 + 0.020}" rpy="0 0 0"/>
+  </joint>
+
+  <!--
+    前轮转向中间 link。
+    每个前轮先通过 steer_joint 绕 z 轴转向，再通过 wheel_joint 绕 y 轴滚动。
+    这两个 link 本身不显示，只作为关节层级的连接点。
+  -->
+  <link name="front_left_steer_link">
+    <xacro:box_inertial mass="0.03" x="0.01" y="0.01" z="0.01"/>
+  </link>
+  <link name="front_right_steer_link">
+    <xacro:box_inertial mass="0.03" x="0.01" y="0.01" z="0.01"/>
+  </link>
+
+  <!-- 左前转向关节：绕 z 轴旋转，位置在前轴左侧。 -->
+  <joint name="front_left_steer_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="front_left_steer_link"/>
+    <origin xyz="${track / 2.0} ${wheelbase / 2.0} ${-body_z + wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.75" upper="0.75" effort="2.0" velocity="5.0"/>
+  </joint>
+
+  <!-- 右前转向关节：绕 z 轴旋转，位置在前轴右侧。 -->
+  <joint name="front_right_steer_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="front_right_steer_link"/>
+    <origin xyz="${track / 2.0} ${-wheelbase / 2.0} ${-body_z + wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.75" upper="0.75" effort="2.0" velocity="5.0"/>
+  </joint>
+
+  <!-- 四个车轮 link，通过上面的宏批量生成。 -->
+  <xacro:cylinder_wheel name="front_left_wheel_link" color_r="0.745" color_g="0.129" color_b="0.129"/>
+  <xacro:cylinder_wheel name="front_right_wheel_link" color_r="0.745" color_g="0.129" color_b="0.129"/>
+  <xacro:cylinder_wheel name="rear_left_wheel_link" color_r="0.745" color_g="0.129" color_b="0.129"/>
+  <xacro:cylinder_wheel name="rear_right_wheel_link" color_r="0.745" color_g="0.129" color_b="0.129"/>
+
+  <!-- 左前车轮滚动关节：父 link 是左前转向 link，因此会跟着 steer_joint 一起改变朝向。 -->
+  <joint name="front_left_wheel_joint" type="continuous">
+    <parent link="front_left_steer_link"/>
+    <child link="front_left_wheel_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- 右前车轮滚动关节。 -->
+  <joint name="front_right_wheel_joint" type="continuous">
+    <parent link="front_right_steer_link"/>
+    <child link="front_right_wheel_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- 左后车轮滚动关节：后轮不转向，直接挂在 base_link 上。 -->
+  <joint name="rear_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_left_wheel_link"/>
+    <origin xyz="${-track / 2.0} ${wheelbase / 2.0} ${-body_z + wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- 右后车轮滚动关节。 -->
+  <joint name="rear_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_right_wheel_link"/>
+    <origin xyz="${-track / 2.0} ${-wheelbase / 2.0} ${-body_z + wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- Gazebo 中给主车体指定材质。 -->
+  <gazebo reference="base_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+
+  <!-- Gazebo 中给上层板指定材质。 -->
+  <gazebo reference="board_link">
+    <material>Gazebo/Pink</material>
+  </gazebo>
+
+  <!--
+    顶部 2D 激光雷达传感器。
+    Gazebo Fortress 的 CPU lidar 生成模拟激光，ros_gz_bridge / ros_ign_bridge
+    把 Gazebo Transport 上的 /scan 桥接成 ROS 2 sensor_msgs/LaserScan。
+  -->
+  <gazebo reference="laser_link">
+    <sensor name="top_laser" type="gpu_lidar">
+      <!-- always_on=true 表示仿真启动后持续工作。 -->
+      <always_on>true</always_on>
+      <!-- 激光发布频率 10Hz。 -->
+      <update_rate>10</update_rate>
+      <topic>/scan</topic>
+      <gz_frame_id>laser_link</gz_frame_id>
+      <!-- 在 Gazebo GUI 中显示激光射线，便于调试传感器方向和范围。 -->
+      <visualize>true</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <!-- 水平 720 条射线，覆盖 -pi 到 +pi，即 360 度扫描。 -->
+            <samples>720</samples>
+            <resolution>1</resolution>
+            <min_angle>-${PI}</min_angle>
+            <max_angle>${PI}</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <!-- 激光最小/最大量程，单位米。max=8m 与 SLAM 参数保持一致。 -->
+          <min>0.05</min>
+          <max>8.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <!-- 加少量高斯噪声，让仿真更接近真实传感器。 -->
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.005</stddev>
+        </noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <!--
+    IMU 传感器。
+    当前导航主要依赖 /odom 和 /scan，IMU 作为仿真传感器输出预留，可供后续融合定位使用。
+  -->
+  <gazebo reference="imu_link">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <!-- IMU 发布频率 50Hz。 -->
+      <update_rate>50</update_rate>
+      <topic>/imu/data</topic>
+      <gz_frame_id>imu_link</gz_frame_id>
+      <visualize>false</visualize>
+    </sensor>
+  </gazebo>
+
+  <!--
+    自定义阿克曼运动学插件。
+    插件源代码在 src/origincar_sim/src/ackermann_kinematic_plugin.cpp。
+    它订阅 /cmd_vel 和 /ackermann_cmd，按阿克曼几何更新 Gazebo 模型位姿，
+    并发布 /odom 与 odom -> base_footprint TF。
+  -->
+  <gazebo>
+    <plugin name="origincar_ackermann_kinematic" filename="libackermann_kinematic_plugin.so">
+      <!-- 控制输入和里程计输出话题。 -->
+      <cmd_vel_topic>/cmd_vel</cmd_vel_topic>
+      <ackermann_topic>/ackermann_cmd</ackermann_topic>
+      <odom_topic>/odom</odom_topic>
+      <!-- TF 坐标系名称。 -->
+      <odom_frame>odom_combined</odom_frame>
+      <base_frame>base_footprint</base_frame>
+      <!-- 车辆几何参数，与文件顶部 xacro property 保持一致。 -->
+      <wheelbase>${wheelbase}</wheelbase>
+      <track_width>${track}</track_width>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <!-- 运动学插件每帧把 base_footprint 固定在地面 z=0，避免物理引擎把模型拉穿地面。 -->
+      <model_z>0.0</model_z>
+      <!-- 最大前轮转角和命令超时停车时间。 -->
+      <max_steering_angle>0.65</max_steering_angle>
+      <command_timeout>0.5</command_timeout>
+      <!-- 插件要控制的关节名，必须和上面 joint name 完全一致。 -->
+      <front_left_steer_joint>front_left_steer_joint</front_left_steer_joint>
+      <front_right_steer_joint>front_right_steer_joint</front_right_steer_joint>
+      <front_left_wheel_joint>front_left_wheel_joint</front_left_wheel_joint>
+      <front_right_wheel_joint>front_right_wheel_joint</front_right_wheel_joint>
+      <rear_left_wheel_joint>rear_left_wheel_joint</rear_left_wheel_joint>
+      <rear_right_wheel_joint>rear_right_wheel_joint</rear_right_wheel_joint>
+    </plugin>
+  </gazebo>
+</robot>

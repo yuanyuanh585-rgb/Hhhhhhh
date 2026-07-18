@@ -1,0 +1,39 @@
+<!--
+  Origincar fixed-route navigation behavior tree.
+
+  Design goal:
+  - Compute the global path only when a new goal starts or the goal is updated.
+  - Do NOT recompute the global path because an obstacle blocks the route.
+  - Do NOT invoke Nav2 recoveries, costmap clearing, waiting, backing up, or
+    any other official fallback behaviors.
+  - Follow the fixed global path directly with the controller selected by launch.
+
+  Important:
+  This tree intentionally does not keep Nav2's default recovery subtree and
+  does not call SmoothPath. The project requirement is "plan once, then track
+  that route as-is". If the official recovery tree were kept, Nav2 could clear
+  costmaps, wait, back up, or trigger other fallback actions that are outside
+  the desired behavior boundary.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="NavigateOnceThenFollow">
+      <!--
+        GoalUpdatedController only re-ticks ComputePathToPose when the target
+        itself changes. For the same goal, planner_server will not be called
+        again because of obstacle observations or path-validity checks.
+      -->
+      <GoalUpdatedController>
+        <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+      </GoalUpdatedController>
+
+      <!--
+        Once the global path has been generated, it is handed to the selected
+        controller as-is.
+        No extra Nav2 action is inserted here: no smoothing, no recovery, no
+        costmap clearing, and no backup/wait fallbacks.
+      -->
+      <FollowPath path="{path}" controller_id="ORIGINCAR_CONTROLLER_ID"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>

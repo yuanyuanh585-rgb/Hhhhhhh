@@ -1,0 +1,114 @@
+solid traffic_cone_body
+  facet normal 0 0 0
+    outer loop
+      vertex 0 0 0.15
+      vertex 0.09 0 -0.15
+      vertex 0.06364 0.06364 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 0 0 0.15
+      vertex 0.06364 0.06364 -0.15
+      vertex 0 0.09 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 0 0 0.15
+      vertex 0 0.09 -0.15
+      vertex -0.06364 0.06364 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 0 0 0.15
+      vertex -0.06364 0.06364 -0.15
+      vertex -0.09 0 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 0 0 0.15
+      vertex -0.09 0 -0.15
+      vertex -0.06364 -0.06364 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 0 0 0.15
+      vertex -0.06364 -0.06364 -0.15
+      vertex 0 -0.09 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 0 0 0.15
+      vertex 0 -0.09 -0.15
+      vertex 0.06364 -0.06364 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 0 0 0.15
+      vertex 0.06364 -0.06364 -0.15
+      vertex 0.09 0 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex 0 0 -0.15
+      vertex 0.06364 0.06364 -0.15
+      vertex 0.09 0 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex 0 0 -0.15
+      vertex 0 0.09 -0.15
+      vertex 0.06364 0.06364 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex 0 0 -0.15
+      vertex -0.06364 0.06364 -0.15
+      vertex 0 0.09 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex 0 0 -0.15
+      vertex -0.09 0 -0.15
+      vertex -0.06364 0.06364 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex 0 0 -0.15
+      vertex -0.06364 -0.06364 -0.15
+      vertex -0.09 0 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex 0 0 -0.15
+      vertex 0 -0.09 -0.15
+      vertex -0.06364 -0.06364 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex 0 0 -0.15
+      vertex 0.06364 -0.06364 -0.15
+      vertex 0 -0.09 -0.15
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex 0 0 -0.15
+      vertex 0.09 0 -0.15
+      vertex 0.06364 -0.06364 -0.15
+    endloop
+  endfacet
+endsolid traffic_cone_body

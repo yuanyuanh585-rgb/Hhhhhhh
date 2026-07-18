@@ -1,0 +1,25 @@
+// Gazebo/OGRE 材质脚本。
+// model.sdf 中的 floor visual 通过 <name>OrigincarSim/SmartMap</name>
+// 引用这里定义的材质，从而把 smart_car_map.png 贴到 5m x 5m 地面上。
+material OrigincarSim/SmartMap
+{
+  // technique/pass 是 OGRE 材质的渲染层级。当前只需要一个基础 pass。
+  technique
+  {
+    pass
+    {
+      // 环境光和漫反射都设为白色，使纹理颜色尽量按原图显示。
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      // 很弱的高光，避免地面反光太强影响观察。
+      specular 0.05 0.05 0.05 1.0 8.0
+      texture_unit
+      {
+        // 纹理图片位于 materials/textures/smart_car_map.png。
+        texture smart_car_map.png
+        // 各向异性过滤可以在斜视角下让地面纹理更清晰。
+        filtering anisotropic
+      }
+    }
+  }
+}

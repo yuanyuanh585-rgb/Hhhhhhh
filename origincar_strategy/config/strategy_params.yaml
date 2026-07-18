@@ -1,0 +1,11 @@
+route_strategy_controller:
+  ros__parameters:
+    use_sim_time: false
+    routes_file: "<global_routes_file>"
+    waiting_switch_timeout: 2.0
+    default_direction: clockwise
+    transition_back_distance: 0.45
+    transition_skip_angle_threshold_deg: 65.0
+    global_frame: map
+    robot_base_frame: base_footprint
+    action_server_timeout: 5.0

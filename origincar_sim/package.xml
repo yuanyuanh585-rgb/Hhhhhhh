@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <!-- 包名：和 CMakeLists.txt 中的 project(origincar_sim) 必须一致。 -->
+  <name>origincar_sim</name>
+  <!-- 包版本。 -->
+  <version>0.1.0</version>
+  <!-- 包说明：本包提供 Gazebo Fortress 仿真、URDF/xacro、RViz 配置和底盘插件。 -->
+  <description>Gazebo Fortress simulation for the Origincar Ackermann robot.</description>
+  <!-- 维护者和许可证是 ROS 包描述文件的必填信息。 -->
+  <maintainer email="xjl@example.com">xjl</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- 构建工具依赖。 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- ackermann_msgs: 插件订阅 /ackermann_cmd。 -->
+  <depend>ackermann_msgs</depend>
+  <!-- geometry_msgs: 插件订阅 /cmd_vel，发布 TF 消息。 -->
+  <depend>geometry_msgs</depend>
+  <!-- ignition-gazebo6 / ignition-plugin1: 编译 Gazebo Fortress System 插件。 -->
+  <depend>ignition-gazebo6</depend>
+  <depend>ignition-plugin1</depend>
+  <!-- launch / launch_ros: sim_world.launch.py 使用的 ROS 2 launch API。 -->
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+  <!-- nav_msgs: 插件发布 /odom。 -->
+  <depend>nav_msgs</depend>
+  <!-- rclpy: texture_marker_publisher.py 使用 Python ROS 2 客户端库。 -->
+  <depend>rclpy</depend>
+  <!-- python3-pil: texture_marker_publisher.py 读取、旋转和缩放 PNG 图片。 -->
+  <depend>python3-pil</depend>
+  <!-- rclcpp: C++ Gazebo 插件内部使用 ROS 2 节点 API。 -->
+  <depend>rclcpp</depend>
+  <!-- robot_state_publisher: 发布机器人 URDF 对应的 TF 链。 -->
+  <depend>robot_state_publisher</depend>
+  <!-- sensor_msgs: Gazebo bridge 发布 LaserScan / Imu。 -->
+  <depend>sensor_msgs</depend>
+  <!-- std_msgs: texture_marker_publisher.py 使用 ColorRGBA 给彩色栅格逐点上色。 -->
+  <depend>std_msgs</depend>
+  <!-- tf2/tf2_ros: 插件生成四元数并广播 odom -> base_footprint。 -->
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <!-- visualization_msgs: texture_marker_publisher.py 发布 Marker。 -->
+  <depend>visualization_msgs</depend>
+  <!-- xacro: launch 时把 origincar_ackermann.urdf.xacro 展开为 URDF。 -->
+  <depend>xacro</depend>
+
+  <!-- ros_gz_sim / ros_gz_bridge: ROS 2 Humble 和 Gazebo Fortress 的启动与传感器桥接。 -->
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <!-- ros2launch: 提供 ros2 launch 命令行入口。 -->
+  <exec_depend>ros2launch</exec_depend>
+  <!-- joint_state_publisher: 单独查看模型时给关节提供默认状态。 -->
+  <exec_depend>joint_state_publisher</exec_depend>
+  <!-- rviz2: 查看模型、地图、激光和导航状态。 -->
+  <exec_depend>rviz2</exec_depend>
+
+  <!-- 常见 ROS 2 lint 测试依赖，后续启用测试时使用。 -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <!-- 声明构建类型。 -->
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

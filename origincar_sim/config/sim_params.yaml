@@ -1,0 +1,20 @@
+# 仿真底盘几何参数备份文件。
+# 当前 Gazebo 插件的参数主要从 URDF/xacro 中 <plugin> 标签读取；
+# 这个 YAML 可以作为调参记录，或未来改成 ROS 参数加载时复用。
+origincar_ackermann:
+  # ROS 2 节点参数固定写在 ros__parameters 下。
+  ros__parameters:
+    # 前后轴距，单位米；影响转角到 yaw_rate 的换算。
+    wheelbase: 0.189
+    # 左右轮距，单位米；影响阿克曼左右前轮内外侧转角。
+    track_width: 0.1682
+    # 车轮半径，单位米；用于把线速度换算成车轮可视化滚动角速度。
+    wheel_radius: 0.03
+    # 最大前轮转角，单位弧度；0.65rad 约等于 37.2 度。
+    max_steering_angle: 0.65
+    # 控制命令超时时间，单位秒；超过该时间没有新命令就停车。
+    command_timeout: 0.5
+    # 里程计父坐标系。
+    odom_frame: odom_combined
+    # 里程计子坐标系，也就是机器人底盘在 TF 树中的运动坐标系。
+    base_frame: base_footprint

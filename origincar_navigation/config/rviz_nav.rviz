@@ -1,0 +1,86 @@
+# RViz 导航视图配置。
+# 由 origincar_navigation/launch/view_navigation.launch.py 通过 rviz2 -d 加载。
+# 用途：查看地图、机器人模型、TF、激光、全局路径和激光定位位姿，并使用工具栏发送 Goal。
+Panels:
+  # 左侧 Displays 面板，用来开关和配置各显示项。
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Displays:
+    # 网格：作为 map 坐标系下的空间参考。
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Reference Frame: map
+    # 静态地图：订阅 nav2_map_server 发布的 /map。
+    - Class: rviz_default_plugins/Map
+      Enabled: true
+      Name: Map
+      Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /map
+      Use Timestamp: false
+    # 机器人模型：从 /robot_description 读取 URDF，并结合 TF 显示车体和轮子。
+    - Class: rviz_default_plugins/RobotModel
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
+      Enabled: true
+      Name: RobotModel
+    # TF 树：查看 map、odom、base_footprint、base_link、laser_link 等坐标系关系。
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+    # 激光点云：订阅 Gazebo 雷达插件发布的 /scan。
+    - Class: rviz_default_plugins/LaserScan
+      Enabled: true
+      Name: LaserScan
+      Topic:
+        Value: /scan
+    # 全局路径：Nav2 planner_server 发布到 /plan。
+    - Class: rviz_default_plugins/Path
+      Alpha: 1
+      Buffer Length: 1
+      Color: 255; 20; 20
+      Enabled: true
+      Line Style: Lines
+      Line Width: 0.08
+      Name: GlobalPlan
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0.08
+      Pose Style: None
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /plan
+    # 激光定位位姿：订阅 /laser_pose，显示定位结果及协方差。
+    - Class: rviz_default_plugins/PoseWithCovariance
+      Enabled: true
+      Name: Laser Pose
+      Topic:
+        Value: /laser_pose
+  Global Options:
+    # 固定坐标系使用 map，便于同时观察静态地图、全局路径和机器人位置。
+    Fixed Frame: map
+  Tools:
+    # 基础交互和相机工具。
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    # 设置导航目标：向 Nav2 发送目标位姿。
+    - Class: rviz_default_plugins/SetGoal
+  Views:
+    Current:
+      # Orbit 视角适合俯看 2D 导航地图。
+      Class: rviz_default_plugins/Orbit
+      Distance: 6
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0

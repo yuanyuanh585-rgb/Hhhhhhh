@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<sdf version="1.8">
+  <model name="traffic_cone">
+    <static>true</static>
+    <link name="cone_link">
+      <pose>0 0 0.17 0 0 0</pose>
+      <inertial>
+        <mass>0.4</mass>
+        <inertia>
+          <ixx>0.003</ixx>
+          <iyy>0.003</iyy>
+          <izz>0.002</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="base_collision">
+        <pose>0 0 -0.15 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.24 0.24 0.04</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name="body_collision">
+        <pose>0 0 0.0 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.09</radius>
+            <length>0.30</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="base_visual">
+        <pose>0 0 -0.15 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.24 0.24 0.04</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.04 0.04 0.04 1</ambient>
+          <diffuse>0.04 0.04 0.04 1</diffuse>
+          <specular>0.02 0.02 0.02 1</specular>
+        </material>
+      </visual>
+      <visual name="body_visual">
+        <pose>0 0 0.0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://traffic_cone/meshes/cone_body.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1.0 0.28 0.02 1</ambient>
+          <diffuse>1.0 0.28 0.02 1</diffuse>
+          <specular>0.35 0.22 0.12 1</specular>
+        </material>
+      </visual>
+      <visual name="stripe_visual">
+        <pose>0 0 0.02 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.092</radius>
+            <length>0.045</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.95 0.95 0.9 1</ambient>
+          <diffuse>0.95 0.95 0.9 1</diffuse>
+          <specular>0.25 0.25 0.2 1</specular>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

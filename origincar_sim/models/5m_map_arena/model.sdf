@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<!--
+  Gazebo 静态场地模型。
+  该模型提供一个 5m x 5m 的地面平面，四周有低墙，并在地面 visual 上贴
+  smart_car_map.png。Nav2 使用的 maps/sim_5m_map.yaml/pgm 与这个场地对应。
+-->
+<sdf version="1.8">
+  <model name="5m_map_arena">
+    <!-- static=true 表示该模型不会被物理引擎推动，适合作为固定环境。 -->
+    <static>true</static>
+
+    <!-- 地面：只负责物理碰撞，视觉贴图由下方独立 link 提供。 -->
+    <link name="floor">
+      <!-- 地面厚度 0.02m，中心放在 z=-0.01，使上表面刚好位于 z=0。 -->
+      <pose>0 0 -0.01 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>5.0 5.0 0.02</size>
+          </box>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- 地图贴图：独立于碰撞地面，避免贴图平面和车辆/地面深度冲突。 -->
+    <link name="map_texture">
+      <pose>0 0 0.001 0 0 0</pose>
+      <visual name="visual">
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>5.0 5.0</size>
+          </plane>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.05 0.05 0.05 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://5m_map_arena/materials/textures/smart_car_map.png</albedo_map>
+              <metalness>0.0</metalness>
+              <roughness>0.8</roughness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+
+    <!-- 北侧墙：y=+2.525，墙厚 0.05m，高 0.5m。 -->
+    <link name="north_wall">
+      <pose>0 2.525 0.25 0 0 0</pose>
+      <collision name="collision">
+        <geometry><box><size>5.1 0.05 0.5</size></box></geometry>
+      </collision>
+      <visual name="visual">
+        <geometry><box><size>5.1 0.05 0.5</size></box></geometry>
+        <material><ambient>0.75 0.75 0.75 1</ambient><diffuse>0.75 0.75 0.75 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- 南侧墙：y=-2.525。 -->
+    <link name="south_wall">
+      <pose>0 -2.525 0.25 0 0 0</pose>
+      <collision name="collision">
+        <geometry><box><size>5.1 0.05 0.5</size></box></geometry>
+      </collision>
+      <visual name="visual">
+        <geometry><box><size>5.1 0.05 0.5</size></box></geometry>
+        <material><ambient>0.75 0.75 0.75 1</ambient><diffuse>0.75 0.75 0.75 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- 东侧墙：x=+2.525。 -->
+    <link name="east_wall">
+      <pose>2.525 0 0.25 0 0 0</pose>
+      <collision name="collision">
+        <geometry><box><size>0.05 5.1 0.5</size></box></geometry>
+      </collision>
+      <visual name="visual">
+        <geometry><box><size>0.05 5.1 0.5</size></box></geometry>
+        <material><ambient>0.75 0.75 0.75 1</ambient><diffuse>0.75 0.75 0.75 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- 西侧墙：x=-2.525。 -->
+    <link name="west_wall">
+      <pose>-2.525 0 0.25 0 0 0</pose>
+      <collision name="collision">
+        <geometry><box><size>0.05 5.1 0.5</size></box></geometry>
+      </collision>
+      <visual name="visual">
+        <geometry><box><size>0.05 5.1 0.5</size></box></geometry>
+        <material><ambient>0.75 0.75 0.75 1</ambient><diffuse>0.75 0.75 0.75 1</diffuse></material>
+      </visual>
+    </link>
+  </model>
+</sdf>

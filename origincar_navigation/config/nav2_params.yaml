@@ -1,0 +1,600 @@
+# Nav2 导航参数总表。
+# 本文件由 origincar_navigation/launch/navigation.launch.py 读取，并可被上层 launch 通过
+# params_file:=... 覆盖。navigation.launch.py 会统一替换 use_sim_time、行为树 XML 路径、
+# global_routes.yaml 路径，因此这里保留的是实车默认值和可读的参数说明。
+#
+# 坐标系约定：
+# - map：当前系统可信的全局根坐标系，激光定位负责维护 map -> odom_combined；
+# - odom_combined：底盘里程计连续坐标系，会随时间漂移，不再作为局部避障路径基准；
+# - base_footprint：机器人底盘投影坐标系，控制器计算纯追踪转角时会临时转到该坐标系。
+
+laser_localizer:
+  # 纯激光全局定位节点参数。它用 /scan 与静态 /map 匹配，输出 map -> odom_combined，
+  # 让 Nav2、全局路径、局部避障都能工作在稳定的 map 坐标系下。
+  ros__parameters:
+    # 是否使用仿真时间；navigation.launch.py 会按 use_sim_time 启动参数统一覆写。
+    use_sim_time: false
+
+    # 静态地图话题，定位时读取 nav_msgs/OccupancyGrid。
+    map_topic: /map
+
+    # 2D 激光雷达输入话题，定位匹配的主要观测来源。
+    scan_topic: /scan
+
+    # IMU 输入话题；启用 use_imu_yaw_prior 时用于提供 yaw 初值。
+    imu_topic: /imu/data
+
+    # 定位结果调试输出话题，发布激光定位估计出的机器人位姿。
+    pose_topic: /laser_pose
+
+    # 机器人底盘坐标系，定位会估计 map -> base_footprint。
+    base_frame_id: base_footprint
+
+    # 里程计坐标系。定位节点根据 map -> base_footprint 和 odom -> base_footprint
+    # 反推出 Nav2 需要的 map -> odom_combined。
+    odom_frame_id: odom_combined
+
+    # 全局地图坐标系，也是当前导航路径和局部避障的统一世界坐标系。
+    global_frame_id: map
+
+    # 激光雷达坐标系，用于从 /scan 点转换到 base/map。
+    laser_frame_id: laser_link
+
+    # LaserScan 降采样步长；720 点雷达取每 10 个点约 72 条射线，降低全局匹配计算量。
+    scan_step: 10
+
+    # 粗搜索 XY 网格步长，单位 m；越小越准但全局搜索越慢。
+    coarse_xy_step: 0.18
+
+    # 细搜索 XY 网格步长，单位 m；定位收敛后用于提高最终位置精度。
+    fine_xy_step: 0.04
+
+    # 粗搜索 yaw 步长，单位度；配合 IMU 先验可保持较低计算量。
+    coarse_yaw_step_deg: 5.0
+
+    # 细搜索 yaw 步长，单位度；用于收敛到更精确的车头朝向。
+    fine_yaw_step_deg: 0.6
+
+    # 使用激光点的最大距离，单位 m；太远的点噪声和地图误差通常更大。
+    max_range: 8.0
+
+    # 平均匹配分数阈值；低于该值时保留上一帧有效定位，避免跳到错误位姿。
+    min_score: 0.40
+
+    # TF 查询和发布容差，单位 s；用于缓解轻微时间不同步。
+    transform_tolerance: 0.35
+
+    # OccupancyGrid 中大于等于该值的栅格视为占用。
+    occupied_threshold: 50
+
+    # OccupancyGrid 中小于等于该值的栅格视为自由。
+    free_threshold: 25
+
+    # 匹配评分的距离衰减尺度，单位 m；0.08 对 0.03m 分辨率地图比较宽容。
+    score_sigma: 0.08
+
+    # 单帧参与匹配的最少有效激光点数量；低于该值认为观测不足。
+    min_scan_points: 20
+ 
+    # 是否发布定位评分调试话题，便于实车根据分数调整 min_score。
+    debug_publish: true
+
+    # 定位计算频率，单位 Hz；略高于 10Hz 雷达可减少节流边界漏帧。
+    localization_update_frequency: 12.0
+
+    # 最近一次有效 map -> odom_combined 的重发频率，单位 Hz。
+    tf_publish_frequency: 20.0
+
+    # 是否使用 IMU yaw 作为搜索先验，降低正方形/对称地图中的 90/180 度误匹配概率。
+    use_imu_yaw_prior: true
+
+    # IMU yaw 先验附近的搜索窗口，单位度。
+    imu_yaw_search_window_deg: 30.0
+
+    # IMU 数据超时时间，单位 s；超过后不再使用 IMU yaw 先验。
+    imu_timeout: 1.0
+
+    # 定位成功后是否优先围绕上一帧位姿做局部高精度跟踪。
+    use_local_tracking: true
+
+    # 局部跟踪 XY 搜索窗口半宽，单位 m。
+    local_xy_window: 0.30
+
+    # 局部跟踪 yaw 搜索窗口半宽，单位度。
+    local_yaw_window_deg: 10.0
+
+    # 局部跟踪 XY 搜索步长，单位 m。
+    local_xy_step: 0.03
+
+    # 局部跟踪 yaw 搜索步长，单位度。
+    local_yaw_step_deg: 0.5
+
+    # 局部跟踪可接受的最低匹配分数；低于该值会触发失败计数。
+    local_tracking_min_score: 0.35
+
+    # 连续局部跟踪失败次数达到该值后，回退到全局搜索。
+    local_tracking_failure_limit: 3
+
+map_server:
+  # map_server 读取地图 YAML 并发布 /map。当前导航 launch 不直接启动它，
+  # 但定位/bringup launch 复用本文件时会使用该段配置。
+  ros__parameters:
+    # 是否使用仿真时间；由 launch 统一覆写。
+    use_sim_time: false
+
+    # 地图 YAML 路径；默认留空，由上层 launch 的 map:= 参数覆盖。
+    yaml_filename: ""
+
+keepout_filter_mask_server:
+  # 发布局部代价地图使用的虚拟禁行区 mask。该 mask 只包含人工配置的禁行线，
+  # 不替代主 map_server 发布的 /map。
+  ros__parameters:
+    use_sim_time: false
+    yaml_filename: "<local_keepout_mask_file>"
+    topic_name: /local_keepout_filter_mask
+    frame_id: map
+
+keepout_filter_info_server:
+  # 向 local_costmap 的 KeepoutFilter 发布 mask 话题和映射规则。
+  ros__parameters:
+    use_sim_time: false
+    filter_info_topic: /local_keepout_filter_info
+    type: 0
+    mask_topic: /local_keepout_filter_mask
+    base: 0.0
+    multiplier: 1.0
+
+planner_server:
+  # planner_server 只负责“新目标到来时生成一次全局路径”。
+  # 行为树不会因为动态障碍或路径受阻反复调用全局规划器。
+  ros__parameters:
+    # 是否使用仿真时间；由 launch 统一覆写。
+    use_sim_time: false
+
+    # 注册到 planner_server 的规划器插件 ID；行为树 ComputePathToPose 使用 GridBased。
+    planner_plugins: ["GridBased"]
+
+    GridBased:
+      # 全局规划器插件类型。它根据目标 z 编码选择 route_N，非法或普通目标走 Navfn fallback。
+      plugin: origincar_navigation/OrigincarGlobalPlanner
+
+      # 允许通过目标 z 选择的固定路线编号；例如 goal.pose.position.z = 2 选择 route_2。
+      route_ids: ["1", "2", "3", "4"]
+
+      # 固定路线 YAML。navigation.launch.py 会把 <global_routes_file> 替换为实际文件路径。
+      routes_file: "<global_routes_file>"
+
+      # Hermite 插值张力；越大越贴近折线，越小路径越圆滑。 影响固定路线关键点之间生成出来的曲线形状。
+      tension: 1.5
+
+      # 每段路线插值的最少采样数，避免短段路径点过稀。
+      min_interpolation_steps: 10
+
+      # 路径分辨率倍率；数值越大，按段长生成的采样点越多。数值越大，路径点越密。
+      path_resolution_factor: 10.0
+
+      # 从机器人当前位置裁掉起点附近重叠/车身后的路径点，单位 m。
+      trim_distance: 0.15
+
+      # 当 start 与固定路线首配置点足够接近时，跳过该首点，避免起步时重复压同一点。
+      # 仅对至少 2 个配置点的固定路线生效；单点路线仍表示 start -> 唯一配置点。
+      route_start_skip_distance: 0.3
+
+      # 动态倒车过渡路径尝试的转弯半径候选，单位 m。
+      transition_turn_radii: [0.40, 0.55]
+
+      # 动态倒车过渡路径尝试的倒车预备距离候选，单位 m。
+      transition_reverse_prep_distances: [0.0, 0.40, 0.70]
+
+      # 动态过渡路径采样间隔，单位 m。
+      transition_sample_interval: 0.03
+
+controller_server:
+  # controller_server 调度进度检查器、目标检查器和所选路径跟踪控制器。
+  # 最终速度直接发布到 /cmd_vel，不再接 Nav2 velocity_smoother。
+  ros__parameters:
+    # 是否使用仿真时间；由 launch 统一覆写。
+    use_sim_time: false
+
+    # 控制循环频率，单位 Hz。
+    controller_frequency: 20.0
+
+    # 小于该值的 x 方向线速度视为 0，用于过滤数值噪声。
+    min_x_velocity_threshold: 0.001
+
+    # 小于该值的 z 方向角速度视为 0，用于过滤数值噪声。
+    min_theta_velocity_threshold: 0.001
+
+    # 进度检查器插件 ID；当前使用空实现，避免 Nav2 官方“卡住失败”链路介入固定路线导航。
+    progress_checker_plugin: progress_checker
+
+    # 目标检查器插件 ID 列表；Nav2 action 成功条件由 origincar_goal_checker 决定。
+    goal_checker_plugins: ["origincar_goal_checker"]
+
+    # 控制器插件 ID 列表；PurePursuit 是旧纯追踪控制器，MyPlannerFollowPath 是新控制器。
+    controller_plugins: ["PurePursuit", "MyPlannerFollowPath"]
+
+    progress_checker:
+      # 进度检查器类型；始终报告有进展，不主动触发 recovery。
+      plugin: origincar_navigation/NoopProgressChecker
+
+    origincar_goal_checker:
+      # 目标检查器类型；和控制器立即停车逻辑共用同一个 isGoalReached 语义。
+      plugin: origincar_navigation/OrigincarGoalChecker
+
+      # 到达目标的 XY 距离容忍度，单位 m。
+      goal_tolerance: 0.25
+
+      # 到达目标的 yaw 容忍度，单位 rad；1.0472 rad 约等于 60 度。
+      yaw_goal_tolerance: 1.0472
+
+    PurePursuit:
+      # 旧纯追踪控制器。只保留自身控制参数；避障路径提供器使用下方共享配置。
+      plugin: origincar_navigation/OrigincarAckermannPurePursuitController
+
+      # 纯追踪最小前视距离，单位 m。
+      min_lookahead_distance: 0.30
+
+      # 纯追踪最大前视距离，单位 m。
+      max_lookahead_distance: 2.00
+
+      # 前视距离速度系数：lookahead = min_lookahead_distance + lookahead_ratio * |v|。
+      lookahead_ratio: 0.50
+
+      # 前进线速度上限，单位 m/s。
+      max_linear_velocity: 0.9
+
+      # 旧控制器中的转向角限幅，单位 deg。
+      max_angular_: 20.0
+
+      # 保留旧控制器同名参数；Nav2 action 成功仍由 goal_checker 判定。
+      goal_tolerance: 0.10
+
+      # 转弯减速触发阈值，单位 deg。
+      decel_angle_threshold: 30.0
+
+      # 每周期允许目标速度相对当前速度增加的最大幅度，单位 m/s。
+      decel_velocity_threshold: 0.30
+
+      # 转弯减速强度。
+      decel_ratio: 0.10
+
+      # 旧控制器变量名为 max_angular_vel，实际用于限制转弯时的线速度，单位 m/s。
+      max_angular_vel: 0.6
+
+      # 小车角速度换算参数，单位 m；与下位机使用的阿克曼几何参数保持一致。
+      wheelbase: 0.143
+
+      # 倒车时的前视距离缩放系数；保持 1.0，避免倒车前视点过近导致直倒时角速度打满。
+      reverse_lookahead_ratio: 1.00
+
+      # 倒车线速度上限，单位 m/s；控制器倒车时会输出负线速度。
+      max_reverse_velocity: 0.45
+
+      # 判断是否进入倒车模式的短前视距离，单位 m。
+      reverse_check_distance: 0.45
+
+      # TF 查询超时时间，单位 s；路径点转换到 base_footprint 时使用。
+      transform_tolerance: 0.25
+
+    MyPlannerFollowPath:
+      # 新控制器。只保留自身控制参数；避障路径提供器使用下方共享配置。
+      plugin: origincar_navigation/OrigincarAckermannController
+
+      # 低速时的最小前视距离，单位 m。
+      d_min: 0.30
+
+      # 前视距离速度系数：lookahead = min(d_max, d_min + k_gain * |v|)。
+      k_gain: 0.50
+
+      # 最大前视距离，单位 m。
+      d_max: 2.00
+
+      # 中间路径段线速度上限，单位 m/s。
+      v_max: 1.0
+
+      # 航向误差到 yaw rate 的比例系数。
+      yaw_gain: 1.50
+
+      # 终点姿态融合距离，单位 m；进入该距离后逐渐从追点切换到对齐终点 yaw。
+      align_distance: 0.60
+
+      # 终点阶段速度系数：v_cmd = terminal_speed_scale * alpha。
+      terminal_speed_scale: 0.60
+
+      # 终点位置容差，单位 m。
+      dist_tolerance: 0.2
+
+      # 终点姿态容差，单位 rad。
+      yaw_tolerance: 1.0472
+
+      # 速度和角速度死区，小于该值直接置零。
+      deadband: 0.02
+
+      # 线速度一阶滤波旧值权重；新值权重为 1 - old_weight。
+      velocity_filter_old_weight: 0.25
+
+      # 实车轴距，单位 m。
+      wheelbase: 0.143
+
+      # 实车最大前轮转角，单位 deg；控制器会换算成 yaw rate 限幅系数。
+      max_steering_angle_deg: 18.0
+
+      # 判断是否进入倒车模式的短前视距离，单位 m。
+      reverse_check_distance: 0.40
+
+      # TF 查询超时时间，单位 s。
+      transform_tolerance: 0.20
+
+    tracking_route_provider:
+      # 两个控制器共用同一套路径提供器和局部避障配置。
+      plugin: origincar_navigation/SegmentBypassTrackingRouteProvider
+
+      # 是否启用片段替换避障；false 时 provider 会保持当前路径，不做替换。
+      enabled: true
+
+      # 局部避障重算频率，单位 Hz。
+      replan_frequency: 10.0
+
+      segment_bypass:
+        # 沿当前 tracking_path 向前扫描障碍的最大距离，单位 m。
+        scan_distance: 3.0
+
+        # 替换受阻片段时向前额外扩展的安全距离，单位 m。
+        pre_margin: 0.30
+
+        # 替换受阻片段时向后额外扩展的安全距离，单位 m。
+        post_margin: 0.50
+
+        # 替换起点额外向前扩展的路径点数量，用于补偿原路径采样不均匀。
+        pre_point_margin: 3
+
+        # 替换终点额外向后扩展的路径点数量，用于给绕障段留出自然接回空间。
+        post_point_margin: 5
+
+        # 连续受阻长度小于该值时忽略，单位 m；用于过滤单点噪声。
+        min_blocked_length: 0.05
+
+        # 待替换片段长度小于该值时不做 Hybrid A*，单位 m；避免过短片段绕出不自然曲线。
+        min_replace_length: 0.05
+
+        # 从机器人当前位置沿 active_route 搜索最近路径点的最大路径长度，单位 m。
+        prune_search_distance: 2.5
+
+        # 是否对 Hybrid A* 生成的绕障片段做轻量平滑。
+        smoothing_enabled: true
+
+        # 平滑后是否再次检查碰撞；true 时平滑路径碰撞则回退到未平滑绕障路径。
+        smoothing_collision_check: true
+
+        # Hybrid A* 是否允许穿过 NO_INFORMATION 未知栅格。
+        astar_allow_unknown: false
+
+        # 代价值大于等于该值的栅格视为不可通行。
+        astar_lethal_cost: 50
+
+        # 栅格代价进入 A* g_score 的权重。
+        astar_cost_weight: 0.40
+
+        # Hybrid A* 搜索栅格降采样倍率。
+        astar_grid_downsample_factor: 2
+
+        # Hybrid A* 使用的车辆轴距，单位 m；与控制器 wheelbase 一致。
+        hybrid_wheelbase: 0.143
+
+        # Hybrid A* 运动原语最大转角，单位 rad；0.314159rad 约等于 18 度。
+        hybrid_max_steering_angle: 0.314159
+
+        # Hybrid A* yaw 离散桶数量。
+        hybrid_yaw_bins: 36
+
+        # 每个节点展开的转角采样数量；当前只展开前进动作，不展开倒车动作。
+        hybrid_steering_samples: 7
+
+        # 每个 Hybrid A* 动作前进距离，单位 m。
+        hybrid_step_distance: 0.1
+
+        # Hybrid A* 到达片段终点的位置容忍度，单位 m。
+        hybrid_goal_tolerance: 0.1
+
+        # 终点 yaw 软代价死区，单位 rad。
+        hybrid_yaw_tolerance: 0.70
+
+        # 单次 Hybrid A* 搜索最大展开次数。
+        hybrid_max_iterations: 20000
+
+        # 转角代价权重。
+        hybrid_steering_cost_weight: 0.05
+
+        # 终点 yaw 软代价权重。
+        hybrid_goal_yaw_weight: 0.05
+
+        # 绕障路径相对原替换片段的最大长度倍率。
+        hybrid_max_path_length_ratio: 3.0
+
+        # Hybrid A* 搜索走廊半宽，单位 m。
+        hybrid_search_lateral_margin: 0.8
+
+        # 输出绕障路径重采样间隔，单位 m。
+        sample_interval: 0.05
+
+        # 检测受阻片段前，对 active_route 重采样的间隔，单位 m。
+        route_sample_interval: 0.05
+
+bt_navigator:
+  # 行为树导航器只启用 NavigateToPose。自定义行为树保持“新目标规划一次，然后跟踪路径”。
+  ros__parameters:
+    # 是否使用仿真时间；由 launch 统一覆写。
+    use_sim_time: false
+
+    # 行为树使用的全局坐标系。
+    global_frame: map
+
+    # 行为树使用的机器人底盘坐标系。
+    robot_base_frame: base_footprint
+
+    # 里程计话题名；Nav2 BT 节点保留该参数以兼容内部动作/条件节点。
+    odom_topic: odom_combined
+
+    # 行为树主循环周期，单位 ms。
+    bt_loop_duration: 10
+
+    # 等待 action/service server 的默认超时时间，单位 s。
+    default_server_timeout: 20
+
+    # 只启用单目标导航器，避免启动 NavigateThroughPoses 相关链路。
+    navigators: ["navigate_to_pose"]
+
+    navigate_to_pose:
+      # 单目标导航器插件类型。
+      plugin: "nav2_bt_navigator/NavigateToPoseNavigator"
+
+    # 单目标行为树 XML。launch 会替换为本包 navigate_to_pose_fixed_route_once.xml。
+    default_nav_to_pose_bt_xml: <origincar_nav_to_pose_bt_xml>
+
+    # through-poses 占位行为树。Humble 可能初始化该 navigator，提供占位可避免回退官方 recovery 树。
+    default_nav_through_poses_bt_xml: <origincar_nav_through_poses_bt_xml>
+
+    # 当前 XML 真正用到的 BT 插件最小集合；不加载 recoveries / smoother / wait / backup 等节点。
+    plugin_lib_names:
+      - nav2_compute_path_to_pose_action_bt_node
+      - nav2_follow_path_action_bt_node
+      - nav2_pipeline_sequence_bt_node
+      - nav2_goal_updated_controller_bt_node
+      - nav2_navigate_to_pose_action_bt_node
+
+bt_navigator_navigate_to_pose_rclcpp_node:
+  # BT Navigator 内部 NavigateToPose action 节点参数。
+  ros__parameters:
+    # 是否使用仿真时间；需和 bt_navigator 主节点保持一致，launch 会统一覆写。
+    use_sim_time: false
+
+local_costmap:
+  # 局部代价地图由 controller_server 持有，并被 SegmentBypassTrackingRouteProvider 用于检测局部障碍。
+  # 这里显式使用 map，保证 base_plan、active_route、tracking_path、local_costmap 都在同一可信坐标系。
+  local_costmap:
+    ros__parameters:
+      # 是否使用仿真时间；由 launch 统一覆写。
+      use_sim_time: false
+
+      # 内部代价地图更新频率，单位 Hz；影响避障看到障碍变化的速度。
+      update_frequency: 10.0
+
+      # 代价地图发布频率，单位 Hz；主要影响 RViz 显示刷新。
+      publish_frequency: 5.0
+
+      # 局部代价地图全局坐标系。当前系统 map 定位更可信，因此不用 odom_combined 做避障路径基准。
+      global_frame: map
+
+      # 机器人底盘坐标系，代价地图窗口和障碍层需要它获取机器人位姿。
+      robot_base_frame: base_footprint
+
+      # 是否使用随机器人移动的局部窗口。
+      rolling_window: true
+
+      # 局部窗口宽度，单位 m。
+      width: 5
+
+      # 局部窗口高度，单位 m。
+      height: 8
+
+      # 局部代价地图分辨率，单位 m/cell。
+      resolution: 0.03
+
+      # 机器人圆形近似半径，单位 m；用于碰撞和膨胀计算。
+      robot_radius: 0.16
+
+      # 局部代价地图插件列表：激光障碍层 + 膨胀层。
+      plugins: ["obstacle_layer", "inflation_layer"]
+
+      # 代价地图 filter 列表：叠加人工配置的虚拟禁行区。
+      filters: ["keepout_filter"]
+
+      obstacle_layer:
+        # Nav2 标准 2D 激光障碍层。
+        plugin: nav2_costmap_2d::ObstacleLayer
+
+        # 障碍观测源名称列表；下面的 scan 子项定义具体话题。
+        observation_sources: scan
+
+        scan:
+          # LaserScan 障碍输入话题。
+          topic: /scan
+
+          # 观测数据类型。
+          data_type: LaserScan
+
+          # 是否用激光射线清除自由空间。
+          clearing: true
+
+          # 是否用激光命中点标记障碍。
+          marking: true
+
+          # 只接收低于该高度的障碍，单位 m；2D 激光仿真通常低于 1m。
+          max_obstacle_height: 1.0
+
+      inflation_layer:
+        # Nav2 标准膨胀层，在障碍周围生成安全缓冲代价。
+        plugin: nav2_costmap_2d::InflationLayer
+
+        # 障碍向外膨胀半径，单位 m；越大越保守。
+        inflation_radius: 0.30
+
+        # 膨胀代价随距离衰减的系数；越大衰减越快。
+        cost_scaling_factor: 1.2
+
+      keepout_filter:
+        # Nav2 keepout filter，订阅 keepout_filter_info_server 提供的 mask 信息。
+        # mask 内已按 0.15m 画宽，确保虚拟禁行线带有 15cm 禁行膨胀。
+        plugin: nav2_costmap_2d::KeepoutFilter
+        enabled: true
+        filter_info_topic: /local_keepout_filter_info
+
+global_costmap:
+  # 全局代价地图供 planner_server 初始化和 Navfn fallback 使用。
+  # 当前项目不会因为动态障碍反复全局重规划。
+  global_costmap:
+    ros__parameters:
+      # 是否使用仿真时间；由 launch 统一覆写。
+      use_sim_time: false
+
+      # 全局代价地图更新频率，单位 Hz；静态地图场景下可以较低。
+      update_frequency: 1.0
+
+      # 全局代价地图发布频率，单位 Hz；主要用于 RViz 可视化。
+      publish_frequency: 0.2
+
+      # 全局代价地图坐标系。
+      global_frame: map
+
+      # 机器人底盘坐标系。
+      robot_base_frame: base_footprint
+
+      # 全局代价地图分辨率，单位 m/cell。
+      resolution: 0.03
+
+      # 机器人圆形近似半径，单位 m。
+      robot_radius: 0.16
+
+      # 是否保留未知空间；Navfn fallback 会结合 allow_unknown 决定是否可穿过未知区域。
+      track_unknown_space: true
+
+      # 全局代价地图插件列表：静态地图层 + 膨胀层。
+      plugins: ["static_layer", "inflation_layer"]
+
+      static_layer:
+        # Nav2 标准静态地图层，订阅 /map。
+        plugin: nav2_costmap_2d::StaticLayer
+
+        # 使用 transient local 订阅 /map，晚启动也能收到最近一次地图。
+        map_subscribe_transient_local: true
+
+      inflation_layer:
+        # Nav2 标准膨胀层。
+        plugin: nav2_costmap_2d::InflationLayer
+
+        # 障碍向外膨胀半径，单位 m。
+        inflation_radius: 0.20
+
+        # 膨胀代价随距离衰减的系数。
+        cost_scaling_factor: 3.0

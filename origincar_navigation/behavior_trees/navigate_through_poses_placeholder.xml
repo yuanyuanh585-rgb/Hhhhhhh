@@ -1,0 +1,34 @@
+<!--
+  Placeholder tree for Humble bt_navigator.
+
+  Why this file exists:
+  - Even when this project only enables navigate_to_pose, Humble may still
+    instantiate the NavigateThroughPoses navigator during bt_navigator startup.
+  - If its default BT parameter is missing or treated as empty, Humble falls
+    back to the official recovery-heavy XML, which requires RecoveryNode and a
+    much larger plugin set than this project wants to load.
+
+  Project rule:
+  - NavigateThroughPoses is intentionally not used in this project.
+  - This XML only exists so bt_navigator activation can succeed with the
+    minimal plugin_lib_names set.
+
+  Important:
+  - route_strategy_controller only talks to NavigateToPose.
+  - If the project later needs NavigateThroughPoses, replace this placeholder
+    with a real through-poses tree and expand plugin_lib_names accordingly.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <!--
+      Keep this tree parseable with the same minimal BT plugin set used by the
+      real NavigateToPose tree. It is never expected to execute in production.
+    -->
+    <PipelineSequence name="UnusedNavigateThroughPosesPlaceholder">
+      <GoalUpdatedController>
+        <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+      </GoalUpdatedController>
+      <FollowPath path="{path}" controller_id="ORIGINCAR_CONTROLLER_ID"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>
